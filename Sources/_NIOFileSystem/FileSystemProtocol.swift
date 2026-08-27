@@ -788,7 +788,7 @@ extension FileSystemProtocol {
     ///   - lastAccess: The new value of the file's last access time, as time elapsed since the Epoch.
     ///   - lastDataModification: The new value of the file's last data modification time, as time elapsed since the Epoch.
     public func setTimes(
-        forFileAt path: FilePath,
+        forFileAt path: NIOFilePath,
         lastAccess: FileInfo.Timespec?,
         lastDataModification: FileInfo.Timespec?
     ) async throws {
@@ -803,7 +803,7 @@ extension FileSystemProtocol {
     ///   - path: The path of the file to modify.
     ///   - time: The time to which the file's last access time should be set.
     public func setLastAccessTime(
-        forFileAt path: FilePath,
+        forFileAt path: NIOFilePath,
         to time: FileInfo.Timespec
     ) async throws {
         try await self.setTimes(forFileAt: path, lastAccess: time, lastDataModification: nil)
@@ -815,7 +815,7 @@ extension FileSystemProtocol {
     ///   - path: The path of the file to modify.
     ///   - time: The time to which the file's last data modification time should be set.
     public func setLastDataModificationTime(
-        forFileAt path: FilePath,
+        forFileAt path: NIOFilePath,
         to time: FileInfo.Timespec
     ) async throws {
         try await self.setTimes(forFileAt: path, lastAccess: nil, lastDataModification: time)
