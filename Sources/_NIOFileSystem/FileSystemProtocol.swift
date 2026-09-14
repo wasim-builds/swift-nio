@@ -142,7 +142,7 @@ public protocol FileSystemProtocol: Sendable {
     ///        destination of the symbolic link is returned.
     /// - Returns: Information about the file at the given path or `nil` if no file exists.
     func info(
-        forFileAt path: FilePath,
+        forFileAt path: NIOFilePath,
         infoAboutSymbolicLink: Bool
     ) async throws -> FileInfo?
 
@@ -306,6 +306,10 @@ public protocol FileSystemProtocol: Sendable {
     /// a file with a directory and vice versa. After the file or directory at `destinationPath`
     /// has been replaced, the item at `existingPath` will be removed.
     ///
+    /// > Note: This method behaves identically to ``FileSystemProtocol/moveItem(at:to:)``, except that it will replace
+    /// the item at `destinationPath` if it already exists. The item at `existingPath` is moved to the new location and
+    /// will no longer exist at its original path.
+    ///
     /// - Parameters:
     ///   - destinationPath: The path of the file or directory to replace.
     ///   - existingPath: The path of the existing file or directory.
@@ -464,7 +468,7 @@ extension FileSystemProtocol {
     /// - Parameters:
     ///    - path: The path to get information about.
     /// - Returns: Information about the file at the given path or `nil` if no file exists.
-    public func info(forFileAt path: FilePath) async throws -> FileInfo? {
+    public func info(forFileAt path: NIOFilePath) async throws -> FileInfo? {
         try await self.info(forFileAt: path, infoAboutSymbolicLink: false)
     }
 
@@ -770,5 +774,50 @@ extension FileSystemProtocol {
         } tearDown: { _ in
             try await self.removeItem(at: directory, strategy: .platformDefault, recursively: true)
         }
+    }
+}
+
+// MARK: - File attributes
+
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
+extension FileSystemProtocol {
+    /// Sets the file's last access and last data modification times to the given times.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to modify.
+    ///   - lastAccess: The new value of the file's last access time, as time elapsed since the Epoch.
+    ///   - lastDataModification: The new value of the file's last data modification time, as time elapsed since the Epoch.
+    public func setTimes(
+        forFileAt path: NIOFilePath,
+        lastAccess: FileInfo.Timespec?,
+        lastDataModification: FileInfo.Timespec?
+    ) async throws {
+        try await self.withFileHandle(forReadingAt: path) { handle in
+            try await handle.setTimes(lastAccess: lastAccess, lastDataModification: lastDataModification)
+        }
+    }
+
+    /// Sets the file's last access time to the given time.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to modify.
+    ///   - time: The time to which the file's last access time should be set.
+    public func setLastAccessTime(
+        forFileAt path: NIOFilePath,
+        to time: FileInfo.Timespec
+    ) async throws {
+        try await self.setTimes(forFileAt: path, lastAccess: time, lastDataModification: nil)
+    }
+
+    /// Sets the file's last data modification time to the given time.
+    ///
+    /// - Parameters:
+    ///   - path: The path of the file to modify.
+    ///   - time: The time to which the file's last data modification time should be set.
+    public func setLastDataModificationTime(
+        forFileAt path: NIOFilePath,
+        to time: FileInfo.Timespec
+    ) async throws {
+        try await self.setTimes(forFileAt: path, lastAccess: nil, lastDataModification: time)
     }
 }
